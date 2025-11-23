@@ -49,3 +49,29 @@ module "rds" {
   publicly_accessible = false
   multi_az           = false
 }
+
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority)
+  token                  = data.aws_eks_cluster_auth.auth_token.token
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = module.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority)
+    token                  = data.aws_eks_cluster_auth.auth_token.token
+  }
+}
+
+data "aws_eks_cluster_auth" "auth_token" {
+  name = module.eks.cluster_name
+}
+
+module "alb_ingress" {
+  source = "../../modules/alb-ingress-controller"
+
+  cluster_name      = module.eks.cluster_name
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  region            = var.region
+}
