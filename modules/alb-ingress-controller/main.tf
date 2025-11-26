@@ -16,13 +16,9 @@ terraform {
 }
 
 # 1) IAM POLICY from AWS
-data "aws_iam_policy_document" "alb_controller" {
-  source_json = file("${path.module}/iam-policy.json")
-}
-
 resource "aws_iam_policy" "alb_controller_policy" {
   name   = "${var.cluster_name}-alb-controller-policy"
-  policy = data.aws_iam_policy_document.alb_controller.json
+  policy = file("${path.module}/iam-policy.json")
 }
 
 # 2) IAM ROLE for ALB Controller

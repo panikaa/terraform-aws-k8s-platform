@@ -23,5 +23,6 @@ output "oidc_provider_arn" {
 }
 
 output "cluster_certificate_authority" {
-  value = module.eks.cluster_certificate_authority
+  description = "Cluster CA certificate"
+  value       = module.eks.cluster_certificate_authority_data
 }
