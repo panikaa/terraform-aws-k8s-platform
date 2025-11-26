@@ -57,25 +57,22 @@ This environment is ideal for:
 ```
 
 terraform-aws-k8s-platform/
-modules/
-network/                # VPC, subnets, NAT, routes
-eks/                    # EKS + node groups + IRSA
-rds/                    # PostgreSQL + SG + secrets
-alb-ingress-controller/ # IAM + serviceaccount + helm
-envs/
-dev/
-main.tf
-variables.tf
-backend.tf
-outputs.tf
-prod/
-main.tf
-variables.tf
-backend.tf
-outputs.tf
-global/
-s3-remote-state/
-main.tf               # optional script to bootstrap S3 bucket
+  modules/
+    network/                # VPC, subnets, NAT, routes
+    eks/                    # EKS + node groups + IRSA
+    rds/                    # PostgreSQL + SG + secrets
+    alb-ingress-controller/ # IAM + serviceaccount + helm
+  envs/
+    dev/
+      main.tf
+      variables.tf
+      backend.tf
+      outputs.tf
+    prod/
+      main.tf
+      variables.tf
+      backend.tf
+      outputs.tf
 
 ````
 
