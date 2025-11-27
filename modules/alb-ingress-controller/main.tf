@@ -49,6 +49,7 @@ resource "aws_iam_role_policy_attachment" "alb_controller_attach" {
 
 # 3) Create ServiceAccount
 resource "kubernetes_service_account" "alb_sa" {
+  depends_on = [aws_iam_role.alb_controller_role]
   metadata {
     name      = "aws-load-balancer-controller"
     namespace = var.namespace
@@ -64,7 +65,10 @@ resource "helm_release" "alb_ingress" {
   namespace  = var.namespace
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
-
+  depends_on = [
+    kubernetes_service_account.alb_sa
+  ]
+  
   set {
     name  = "clusterName"
     value = var.cluster_name
