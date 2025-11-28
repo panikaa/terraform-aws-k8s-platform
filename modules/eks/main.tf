@@ -1,25 +1,42 @@
 terraform {
+  required_version = ">= 1.5.7"
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = ">= 6.0"
+    }
+    helm = {
+      source = "hashicorp/helm"
+      version = "~> 2.11"
     }
   }
 }
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "20.8.4"
+  version = "~> 21.0"
 
-  cluster_name    = var.cluster_name
-  cluster_version = "1.30"
+  name    = var.cluster_name
+  kubernetes_version = "1.33"
 
   vpc_id          = var.vpc_id
   subnet_ids      = var.private_subnets
 
-  enable_irsa = true
+  endpoint_public_access = true
+  endpoint_private_access = true
 
-  cluster_endpoint_public_access = true
+  enable_cluster_creator_admin_permissions = true
+
+  endpoint_public_access_cidrs = ["84.52.54.66/32"]
+
+  addons = {
+    coredns    = {}
+    kube-proxy = {}
+    vpc-cni = {
+      before_compute = true
+    }
+  }
 
   eks_managed_node_groups = {
     default = {

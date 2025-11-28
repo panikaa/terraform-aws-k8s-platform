@@ -1,8 +1,10 @@
 terraform {
+  required_version = ">= 1.5.7"
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = ">= 6.0"
     }
     helm = {
       source = "hashicorp/helm"
@@ -15,72 +17,89 @@ terraform {
   }
 }
 
-# 1) IAM POLICY from AWS
-resource "aws_iam_policy" "alb_controller_policy" {
-  name   = "${var.cluster_name}-alb-controller-policy"
-  policy = file("${path.module}/iam-policy.json")
-}
-
-# 2) IAM ROLE for ALB Controller
-resource "aws_iam_role" "alb_controller_role" {
-  name = "${var.cluster_name}-alb-controller-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = {
-        Federated = var.oidc_provider_arn
-      }
-      Action = "sts:AssumeRoleWithWebIdentity"
-      Condition = {
-        StringEquals = {
-          "oidc.eks.${var.region}.amazonaws.com/id/${replace(var.oidc_provider_arn, "arn:aws:iam::(.*):oidc-provider/", "")}:sub" = "system:serviceaccount:${var.namespace}:aws-load-balancer-controller"
-        }
-      }
-    }]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "alb_controller_attach" {
-  role       = aws_iam_role.alb_controller_role.name
-  policy_arn = aws_iam_policy.alb_controller_policy.arn
-}
-
 # 3) Create ServiceAccount
-resource "kubernetes_service_account" "alb_sa" {
-  depends_on = [aws_iam_role.alb_controller_role]
-  metadata {
-    name      = "aws-load-balancer-controller"
-    namespace = var.namespace
-    annotations = {
-      "eks.amazonaws.com/role-arn" = aws_iam_role.alb_controller_role.arn
+module "load_balancer_controller_irsa" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
+  version = "6.2.3"
+
+  name = "aws-load-balancer-controller"
+
+  attach_load_balancer_controller_policy = true
+
+  oidc_providers = {
+    this = {
+      provider_arn               = var.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:aws-load-balancer-controller"]
     }
   }
 }
 
 # 4) Install Helm Chart
-resource "helm_release" "alb_ingress" {
-  name       = "aws-load-balancer-controller"
-  namespace  = var.namespace
+resource "helm_release" "aws_load_balancer_controller" {
+  name = "aws-load-balancer-controller"
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
+  namespace  = var.namespace
   depends_on = [
-    kubernetes_service_account.alb_sa
+    module.load_balancer_controller_irsa
   ]
-  
+  set {
+    name  = "replicaCount"
+    value = 1
+  }
+
   set {
     name  = "clusterName"
     value = var.cluster_name
   }
 
   set {
-    name  = "serviceAccount.create"
-    value = "false"
+    name  = "vpcId"
+    value = var.vpc_id
   }
 
   set {
     name  = "serviceAccount.name"
     value = "aws-load-balancer-controller"
   }
+
+  set {
+    name  = "region"
+    value = var.region
+  }
 }
+
+# 5) Create ingress
+resource "kubernetes_ingress_v1" "ingress" {
+  metadata {
+    name      = "${var.cluster_name}-ingress"
+    namespace = var.namespace
+
+    annotations = {
+      "kubernetes.io/ingress.class"                = "alb"
+      "alb.ingress.kubernetes.io/scheme"           = "internet-facing"
+      "alb.ingress.kubernetes.io/target-type"      = "ip"
+    }
+  }
+
+  spec {
+    rule {
+      http {
+        path {
+          path      = "/"
+          path_type = "Prefix"
+
+          backend {
+            service {
+              name = "hcm-frontend"
+              port {
+                number = 80
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+

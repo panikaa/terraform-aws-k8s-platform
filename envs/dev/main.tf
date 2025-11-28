@@ -3,21 +3,13 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = ">= 6.0"
     }
   }
 }
 
 provider "aws" {
   region = var.region
-}
-
-data "aws_eks_cluster" "cluster" {
-  name = module.eks.cluster_name
-}
-
-data "aws_eks_cluster_auth" "cluster_auth" {
-  name = module.eks.cluster_name
 }
 
 module "network" {
@@ -36,9 +28,9 @@ module "eks" {
   public_subnets   = module.network.public_subnets
 
   node_instance_type = "t3.micro"
-  desired_capacity    = 2
+  desired_capacity    = 3
   min_capacity        = 1
-  max_capacity        = 4
+  max_capacity        = 6
 }
 
 module "rds" {
@@ -58,33 +50,13 @@ module "rds" {
   multi_az           = false
 }
 
-provider "kubernetes" {
-  alias                  = "eks"
-  host                   = data.aws_eks_cluster.cluster.endpoint
-  cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority[0].data)
-  token                  = data.aws_eks_cluster_auth.cluster_auth.token
-}
-
-provider "helm" {
-  alias = "eks"
-  kubernetes {
-    host                   = data.aws_eks_cluster.cluster.endpoint
-    cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority[0].data)
-    token                  = data.aws_eks_cluster_auth.cluster_auth.token
-  }
-}
-
 module "alb_ingress" {
   source = "../../modules/alb-ingress-controller"
 
   cluster_name      = module.eks.cluster_name
   oidc_provider_arn = module.eks.oidc_provider_arn
   region            = var.region
+  vpc_id            = module.network.vpc_id
 
   depends_on = [module.eks]
-  
-  providers = {
-    kubernetes = kubernetes.eks
-    helm       = helm.eks
-  }
 }
