@@ -6,10 +6,6 @@ terraform {
       source  = "hashicorp/aws"
       version = ">= 6.0"
     }
-    helm = {
-      source = "hashicorp/helm"
-      version = "~> 2.11"
-    }
   }
 }
 
@@ -28,7 +24,7 @@ module "eks" {
 
   enable_cluster_creator_admin_permissions = true
 
-  endpoint_public_access_cidrs = ["0.0.0.0/0"]
+  endpoint_public_access_cidrs = ["84.52.54.66/32"]
 
   addons = {
     coredns    = {}
