@@ -1,0 +1,14 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: hcm
+  namespace: kube-system
+spec:
+  description: HCM Kubernetes Platform Applications
+  sourceRepos:
+    - '*'
+  destinations:
+    - namespace: hcm
+      server: https://kubernetes.default.svc
+  orphanedResources:
+    warn: true

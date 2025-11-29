@@ -5,6 +5,10 @@ terraform {
       source  = "hashicorp/aws"
       version = ">= 6.0"
     }
+    kubectl = {
+      source  = "gavinbunney/kubectl"
+      version = ">= 1.19.0"
+    }
   }
 }
 
@@ -27,10 +31,10 @@ module "eks" {
   private_subnets  = module.network.private_subnets
   public_subnets   = module.network.public_subnets
 
-  node_instance_type = "t3.micro"
-  desired_capacity    = 3
-  min_capacity        = 1
-  max_capacity        = 6
+  node_instance_type = "t3.small"
+  desired_capacity    = 6
+  min_capacity        = 2
+  max_capacity        = 10
 }
 
 module "rds" {
@@ -57,6 +61,14 @@ module "alb_ingress" {
   oidc_provider_arn = module.eks.oidc_provider_arn
   region            = var.region
   vpc_id            = module.network.vpc_id
+
+  depends_on = [module.eks]
+}
+
+module "argo" {
+  source = "../../modules/argo"
+
+  cluster_name      = module.eks.cluster_name
 
   depends_on = [module.eks]
 }
