@@ -13,11 +13,20 @@ terraform {
   }
 }
 
-# 6) Deploy Argo
+# 6) Create HCM namespace
+resource "kubernetes_namespace" "hcm" {
+  metadata {
+    name = "hcm"
+    labels = {
+      "name" = "hcm"
+    }
+  }
+}
+
+# 7) Deploy Argo
 resource "helm_release" "argocd" {
   name       = "${var.cluster_name}-argo-cd"
   namespace  = var.namespace
-  create_namespace = true
 
   repository = "https://argoproj.github.io/argo-helm"
   chart      = "argo-cd"
@@ -27,25 +36,19 @@ resource "helm_release" "argocd" {
     name  = "configs.cm.syncPolicy"
     value = "automated"
   }
+
+  depends_on = [
+    kubernetes_namespace.hcm
+  ]
 }
 
-# 7) Deploy Project Manifest to Argo
+# 8) Deploy Project Manifest to Argo
 resource "kubectl_manifest" "argocd_project" {
   yaml_body = file("${path.module}/argocd-project.yaml")
 
   depends_on = [
     helm_release.argocd
   ]
-}
-
-# 8) Create HCM namespace
-resource "kubernetes_namespace" "hcm" {
-  metadata {
-    name = "hcm"
-    labels = {
-      "name" = "hcm"
-    }
-  }
 }
 
 # 9) Deploy App Manifest to Argo
