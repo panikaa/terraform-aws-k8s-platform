@@ -9,7 +9,7 @@ terraform {
   }
 }
 
-# 10) Create external secret IRSA roles nad policy
+# 11) Create external secret IRSA roles nad policy
 module "external_secrets_irsa" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
   version = "6.2.3"
@@ -34,7 +34,7 @@ module "external_secrets_irsa" {
   }
 }
 
-# 11) Create service account for external secrets
+# 12) Create service account for external secrets
 resource "kubernetes_service_account" "external_secrets" {
   metadata {
     name      = "external-secrets"
@@ -48,7 +48,7 @@ resource "kubernetes_service_account" "external_secrets" {
   depends_on = [module.external_secrets_irsa]
 }
 
-# 12) Deploy External Secrets to helm
+# 13) Deploy External Secrets to helm
 resource "helm_release" "external_secrets" {
   name       = "external-secrets"
   repository = "https://charts.external-secrets.io"

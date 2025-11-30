@@ -38,16 +38,26 @@ resource "kubectl_manifest" "argocd_project" {
   ]
 }
 
-# 8) Deploy App Manifest to Argo
+# 8) Create HCM namespace
+resource "kubernetes_namespace" "hcm" {
+  metadata {
+    name = "hcm"
+    labels = {
+      "name" = "hcm"
+    }
+  }
+}
+
+# 9) Deploy App Manifest to Argo
 resource "kubectl_manifest" "argocd_app" {
   yaml_body = file("${path.module}/argocd-application.yaml")
 
   depends_on = [
-    helm_release.argocd
+    helm_release.argocd, kubernetes_namespace.hcm
   ]
 }
 
-# 9) Deploy App Manifest to Argo
+# 10) Deploy Platform Manifest to Argo
 resource "kubectl_manifest" "argocd_platform" {
   yaml_body = file("${path.module}/argocd-platform-app.yaml")
 
