@@ -65,10 +65,20 @@ module "alb_ingress" {
   depends_on = [module.eks]
 }
 
-module "utils" {
-  source = "../../modules/utils"
+module "argo" {
+  source = "../../modules/argo"
 
   cluster_name      = module.eks.cluster_name
 
   depends_on = [module.eks]
+}
+
+module "external_secrets" {
+  source = "../../modules/external-secrets"
+
+  cluster_name      = module.eks.cluster_name
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider_url = module.eks.oidc_provider
+
+  depends_on = [module.argo]
 }
