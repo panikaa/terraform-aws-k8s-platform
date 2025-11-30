@@ -289,10 +289,10 @@ ALWAYS tear down when not using EKS/RDS — they are not free.
 
 ## Ingress destroy problems
 
-If you destroy stuck, run this command to unblock it:
+If you destroy stuck on ingress or namespace destroy, run this command to unblock it:
 
 ```
-kubectl patch ingress hcm-dev-ingress -n kube-system -p '{"metadata":{"finalizers":[]}}' --type=merge
+kubectl patch ingress hcm -n hcm -p '{"metadata":{"finalizers":[]}}' --type=merge
 ```
 
 ---
