@@ -35,6 +35,8 @@ module "eks" {
   desired_capacity    = 2
   min_capacity        = 1
   max_capacity        = 3
+
+  depends_on = [module.network]
 }
 
 module "rds" {
@@ -52,6 +54,8 @@ module "rds" {
   allocated_storage = 20
   publicly_accessible = false
   multi_az           = false
+
+  depends_on = [module.network]
 }
 
 module "alb_ingress" {
