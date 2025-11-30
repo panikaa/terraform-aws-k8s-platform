@@ -31,10 +31,10 @@ module "eks" {
   private_subnets  = module.network.private_subnets
   public_subnets   = module.network.public_subnets
 
-  node_instance_type = "t3.small"
-  desired_capacity    = 6
-  min_capacity        = 2
-  max_capacity        = 10
+  node_instance_type = "m7i-flex.large"
+  desired_capacity    = 2
+  min_capacity        = 1
+  max_capacity        = 3
 }
 
 module "rds" {
@@ -65,8 +65,8 @@ module "alb_ingress" {
   depends_on = [module.eks]
 }
 
-module "argo" {
-  source = "../../modules/argo"
+module "utils" {
+  source = "../../modules/utils"
 
   cluster_name      = module.eks.cluster_name
 

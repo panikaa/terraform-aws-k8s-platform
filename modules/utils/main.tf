@@ -25,7 +25,7 @@ resource "helm_release" "argocd" {
 
   repository = "https://argoproj.github.io/argo-helm"
   chart      = "argo-cd"
-  version    = "5.51.2"
+  version    = "9.1.4"
 
   set {
     name  = "configs.cm.syncPolicy"
@@ -33,7 +33,34 @@ resource "helm_release" "argocd" {
   }
 }
 
-# 7) Deploy Project Manifest to Argo
+# 7) Deploy External Secrets to helm
+resource "helm_release" "external_secrets" {
+  name       = "external-secrets"
+  repository = "https://charts.external-secrets.io"
+  chart      = "external-secrets"
+  version    = "0.9.13"
+  namespace  = var.namespace
+
+  set {
+    name  = "serviceAccount.create"
+    value = "true"
+  }
+
+  set {
+    name  = "serviceAccount.name"
+    value = "external-secrets"
+  }
+
+  set {
+    name  = "webhook.port"
+    value = "9443"
+  }
+  depends_on = [
+    helm_release.argocd
+  ]
+}
+
+# 8) Deploy Project Manifest to Argo
 resource "kubectl_manifest" "argocd_project" {
   yaml_body = file("${path.module}/argocd-project.yaml")
 
@@ -42,9 +69,18 @@ resource "kubectl_manifest" "argocd_project" {
   ]
 }
 
-# 8) Deploy App Manifest to Argo
+# 9) Deploy App Manifest to Argo
 resource "kubectl_manifest" "argocd_app" {
   yaml_body = file("${path.module}/argocd-application.yaml")
+
+  depends_on = [
+    helm_release.argocd
+  ]
+}
+
+# 10) Deploy App Manifest to Argo
+resource "kubectl_manifest" "argocd_platform" {
+  yaml_body = file("${path.module}/argocd-platform-app.yaml")
 
   depends_on = [
     helm_release.argocd

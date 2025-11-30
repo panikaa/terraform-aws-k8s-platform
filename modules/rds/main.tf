@@ -1,6 +1,6 @@
 resource "random_password" "password" {
   length  = 20
-  special = true
+  special = false
 }
 
 resource "aws_secretsmanager_secret" "db_password" {
@@ -9,8 +9,15 @@ resource "aws_secretsmanager_secret" "db_password" {
 }
 
 resource "aws_secretsmanager_secret_version" "db_pass_version" {
-  secret_id     = aws_secretsmanager_secret.db_password.id
-  secret_string = random_password.password.result
+  secret_id = aws_secretsmanager_secret.db_password.id
+
+  secret_string = jsonencode({
+    username = var.username
+    password = random_password.password.result
+    host     = aws_db_instance.this.address
+    port     = aws_db_instance.this.port
+    dbname   = var.db_name
+  })
 }
 
 # Subnet Group
