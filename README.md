@@ -1,12 +1,15 @@
 # AWS Kubernetes Platform – Terraform Infrastructure (EKS + RDS + VPC + ALB)
 
-This repository contains a fully production-grade **AWS Kubernetes Platform**, built entirely with **Terraform**.  
+This repository contains a fully production-grade **AWS Kubernetes Platform**, built entirely with **Terraform**.
+All in only two namespaces - for application and infra stuff. 
 It is designed to demonstrate a real-world cloud & DevOps stack:
 
 - **EKS** Kubernetes cluster  
 - **RDS PostgreSQL** (production-ready DB)  
 - **VPC** (public/private subnets, IGW, NAT)  
 - **AWS Load Balancer Controller (ALB Ingress Controller)**  
+- **Argo CD application**  
+- **External Secrets for Databse URL**
 - **Remote Terraform state in S3 + DynamoDB lock**  
 - **Modular, scalable, enterprise-ready Terraform layout**
 
@@ -39,7 +42,7 @@ This environment is ideal for:
 
 ### **RDS PostgreSQL**
 - PostgreSQL 14  
-- `db.t3.micro` (dev) with ability to scale  
+- `db.t3.micro` (dev)[check it at variables.tf] with ability to scale  
 - Secrets stored in Secrets Manager  
 - DB subnet group in private subnets  
 - SG access restricted to EKS nodes only  
@@ -49,6 +52,18 @@ This environment is ideal for:
 - Helm installation  
 - Ingress class `alb`  
 - Fully automated ALB provisioning  
+
+### **Argo**
+- Helm based Argo installation 
+- Fully Managed IAM Role
+- Full CI/CD integration
+- Fully automated project and app provisioning  
+
+### **External Secrets**
+- IAM role + policy + IRSA
+- Extenal secrets installation
+- Full Postgres URL integration with 1h refresh time
+- Argo Secret Storage for app
 
 ---
 
@@ -61,18 +76,22 @@ terraform-aws-k8s-platform/
     network/                # VPC, subnets, NAT, routes
     eks/                    # EKS + node groups + IRSA
     rds/                    # PostgreSQL + SG + secrets
-    alb-ingress-controller/ # IAM + serviceaccount + helm
+    alb-ingress-controller/ # ALB + ingress
+    argo/                   # Argo full CI/CD 
+    external-secrets/       # IAM + serviceaccount + Extenal Secrets
   envs/
     dev/
       main.tf
       variables.tf
       backend.tf
       outputs.tf
+      providers.tf
     prod/
       main.tf
       variables.tf
       backend.tf
       outputs.tf
+      providers.tf
 
 ````
 
@@ -83,27 +102,27 @@ This layout follows best practices used by large DevOps/SRE teams.
 # 🧱 Architecture Diagram
 
 ```markdown
-                     ┌───────────────────────────┐
+                     ┌────────────────────────────┐
                      │         Internet           │
-                     └───────────────┬───────────┘
+                     └───────────────┬────────────┘
                                      │
                        ┌─────────────▼──────────────┐
                        │     AWS Load Balancer      │
                        │ (ALB Ingress Controller)   │
                        └─────────────┬──────────────┘
                                      │
-                     ┌───────────────▼────────────────┐
+                     ┌───────────────▼─────────────────┐
                      │        Amazon EKS Cluster       │
                      │  - API Server                   │
                      │  - Managed Node Groups          │
-                     └───────────────┬────────────────┘
+                     └───────────────┬─────────────────┘
                                      │
-                     ┌───────────────▼────────────────┐
-                     │         Worker Nodes            │
-                     │   Pods, Services, Deployments   │
-                     └───────────────┬────────────────┘
+                     ┌───────────────▼────────────────────────┐
+                     │         Worker Nodes                   │
+                     │Secrets, Pods, Services, Deployments    │
+                     └───────────────┬────────────────────────┘
                                      │
-                     ┌───────────────▼────────────────┐
+                     ┌───────────────▼─────────────────┐
                      │        Amazon RDS Postgres      │
                      │   Private subnet, SG restricted │
                      └─────────────────────────────────┘
@@ -115,13 +134,16 @@ This layout follows best practices used by large DevOps/SRE teams.
 
 Before using this repository, ensure:
 
-* Terraform ≥ 1.3
+* Terraform ≥ 1.14
 * AWS CLI configured (`aws configure`)
 * IAM user with admin or appropriate permissions
 * kubectl installed
 * helm installed
 * S3 bucket created for Terraform backend (or use provided module)
-
+* Add image registry auth after with:
+```
+kubectl create secret docker-registry ghcr-auth   --docker-server=ghcr.io   --docker-username=username   --docker-password="password"   --docker-email="email@example.com"   -n hcm
+```
 ---
 
 # 🏗 Deployment — Step by Step
@@ -180,6 +202,8 @@ This will create:
 * Managed Node Group
 * RDS
 * ALB Controller IAM + helm deployment
+* Argo CI/CD with full integration
+* External Secrets for Postgres URL
 
 Full provisioning takes **12–18 minutes**.
 
@@ -223,7 +247,7 @@ spec:
               number: 80
 ```
 
-Check ALB:
+Check ALB after:
 
 ```
 kubectl get ingress
@@ -233,7 +257,7 @@ kubectl get ingress
 
 # 🔒 RDS Credentials
 
-Password is stored in Secrets Manager:
+Query and password info is stored in Secrets Manager:
 
 ```
 aws secretsmanager get-secret-value --secret-id rds-hcm-password
@@ -262,6 +286,14 @@ terraform destroy
 ```
 
 ALWAYS tear down when not using EKS/RDS — they are not free.
+
+## Ingress destroy problems
+
+If you destroy stuck, run this command to unblock it:
+
+```
+kubectl patch ingress hcm-dev-ingress -n kube-system -p '{"metadata":{"finalizers":[]}}' --type=merge
+```
 
 ---
 

@@ -31,7 +31,7 @@ module "eks" {
   private_subnets  = module.network.private_subnets
   public_subnets   = module.network.public_subnets
 
-  node_instance_type = "m7i-flex.large"
+  node_instance_type = var.node_instance_type
   desired_capacity    = 2
   min_capacity        = 1
   max_capacity        = 3

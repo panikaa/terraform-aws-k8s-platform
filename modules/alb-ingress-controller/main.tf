@@ -10,10 +10,6 @@ terraform {
       source = "hashicorp/helm"
       version = "~> 2.11"
     }
-    kubernetes = {
-      source = "hashicorp/kubernetes"
-      version = "~> 2.24"
-    }
   }
 }
 
@@ -68,38 +64,3 @@ resource "helm_release" "aws_load_balancer_controller" {
     value = var.region
   }
 }
-
-# 5) Create ingress
-resource "kubernetes_ingress_v1" "ingress" {
-  metadata {
-    name      = "${var.cluster_name}-ingress"
-    namespace = var.namespace
-
-    annotations = {
-      "kubernetes.io/ingress.class"                = "alb"
-      "alb.ingress.kubernetes.io/scheme"           = "internet-facing"
-      "alb.ingress.kubernetes.io/target-type"      = "ip"
-    }
-  }
-
-  spec {
-    rule {
-      http {
-        path {
-          path      = "/"
-          path_type = "Prefix"
-
-          backend {
-            service {
-              name = "hcm-frontend"
-              port {
-                number = 80
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
