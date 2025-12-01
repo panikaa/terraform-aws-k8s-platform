@@ -12,3 +12,5 @@ spec:
       server: https://kubernetes.default.svc
   orphanedResources:
     warn: true
+  sourceNamespaces:
+    - hcm

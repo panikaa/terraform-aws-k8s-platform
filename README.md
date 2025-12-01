@@ -142,7 +142,7 @@ Before using this repository, ensure:
 * S3 bucket created for Terraform backend (or use provided module)
 * Add image registry auth after with:
 ```
-kubectl create secret docker-registry ghcr-auth   --docker-server=ghcr.io   --docker-username=username   --docker-password="password"   --docker-email="email@example.com"   -n hcm
+kubectl create secret docker-registry ghcr-auth --docker-server=ghcr.io --docker-username=username --docker-password="password"   --docker-email="email@example.com" -n hcm
 ```
 ---
 
@@ -287,12 +287,29 @@ terraform destroy
 
 ALWAYS tear down when not using EKS/RDS — they are not free.
 
-## Ingress destroy problems
+## IGW destroy problems
 
-If you destroy stuck on ingress or namespace destroy, run this command to unblock it:
+AWS is preventing from deleting IGW with existing load balancers or target groups.
+If you destroy stuck on Internet Gateway destroy, run this commands to unblock it:
 
 ```
-kubectl patch ingress hcm -n hcm -p '{"metadata":{"finalizers":[]}}' --type=merge
+aws elbv2 describe-load-balancers --region eu-central-1 \
+  --query "LoadBalancers[?starts_with(LoadBalancerName, 'k8s')].LoadBalancerArn" \
+  --output text | while read arn; do
+    [ -z "$arn" ] && continue
+    aws elbv2 delete-load-balancer --region eu-central-1 --load-balancer-arn "$arn" || true
+  done
+```
+```
+aws elbv2 describe-target-groups --region eu-central-1 \
+  --query "TargetGroups[?starts_with(TargetGroupName, 'k8s')].TargetGroupArn" \
+  --output text | tr '\t' '\n' | while read arn; do
+
+    [ -z "$arn" ] && continue
+    echo "Deleting $arn"
+    aws elbv2 delete-target-group --region eu-central-1 --target-group-arn "$arn" || true
+
+done
 ```
 
 ---
