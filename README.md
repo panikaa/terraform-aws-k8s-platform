@@ -290,7 +290,7 @@ ALWAYS tear down when not using EKS/RDS — they are not free.
 ## IGW destroy problems
 
 AWS is preventing from deleting IGW with existing load balancers or target groups.
-If you destroy stuck on Internet Gateway destroy, run this commands to unblock it:
+It's good to run this command before destroy, or it can stuck on Internet Gateway destroy:
 
 ```
 aws elbv2 describe-load-balancers --region eu-central-1 \
@@ -310,6 +310,14 @@ aws elbv2 describe-target-groups --region eu-central-1 \
     aws elbv2 delete-target-group --region eu-central-1 --target-group-arn "$arn" || true
 
 done
+```
+
+## RDS Secret
+
+You can check you RDS connection details in this secret, but in destroy your secret will be kept, if you want to delete it and not run into errors on another terraform apply, run this command:
+
+```
+aws secretsmanager delete-secret --secret-id rds-hcm-password --force-delete-without-recovery
 ```
 
 ---
