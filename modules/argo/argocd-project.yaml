@@ -14,3 +14,4 @@ spec:
     warn: true
   sourceNamespaces:
     - hcm
+    - kube-system
