@@ -24,7 +24,7 @@ module "eks" {
 
   enable_cluster_creator_admin_permissions = true
 
-  endpoint_public_access_cidrs = ["84.52.54.66/32"]
+  endpoint_public_access_cidrs = ["0.0.0.0/0"]
 
   addons = {
     coredns    = {}
